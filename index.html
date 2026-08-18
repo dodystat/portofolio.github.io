@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jurnal Trading Saham</title>
+<style>
+  :root{
+    --bg:#0B0F14; --card:#131B26; --border:#233042; --text:#E8EDF2;
+    --muted:#7C8798; --green:#2DD4BF; --red:#F87171; --gold:#E8B44C;
+    --input-bg:#0B0F14;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    padding:20px;
+  }
+  .wrap{max-width:1180px; margin:0 auto;}
+  h1{font-size:20px; font-weight:700; margin:0;}
+  .sub{font-size:12px; color:var(--muted); margin-top:2px;}
+  .header{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:6px;}
+  .header-actions{display:flex; align-items:center; gap:8px;}
+  .refresh-status{font-size:11px; color:var(--muted); margin-bottom:16px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+  .refresh-status.err{color:var(--red);}
+  .live-dot{width:6px; height:6px; border-radius:50%; background:var(--green); display:inline-block; box-shadow:0 0 0 rgba(45,212,191,0.5); animation:pulse 1.8s infinite;}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(45,212,191,0.5);}
+    70%{box-shadow:0 0 0 5px rgba(45,212,191,0);}
+    100%{box-shadow:0 0 0 0 rgba(45,212,191,0);}
+  }
+  .spin{animation:spin 0.9s linear infinite;}
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  button{cursor:pointer; font-family:inherit;}
+  .btn-primary{
+    background:var(--gold); color:#3A2A05; border:none; border-radius:8px;
+    padding:9px 16px; font-size:13px; font-weight:600; display:flex; align-items:center; gap:6px;
+  }
+  .btn-ghost{
+    background:transparent; color:#9CA6B4; border:1px solid var(--border); border-radius:6px;
+    padding:7px 12px; font-size:13px;
+  }
+  .btn-icon{background:transparent; border:none; padding:4px; border-radius:6px; display:flex;}
+  .btn-icon:hover{background:rgba(255,255,255,0.06);}
+  .spotlight{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px;}
+  .spot-card{flex:1; min-width:220px; border-radius:12px; padding:12px; display:flex; align-items:center; gap:10px;}
+  .spot-gain{background:rgba(45,212,191,0.08); border:1px solid rgba(45,212,191,0.3);}
+  .spot-loss{background:rgba(248,113,113,0.08); border:1px solid rgba(248,113,113,0.3);}
+  .spot-label{font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--muted);}
+  .spot-value{font-family:ui-monospace,Menlo,Consolas,monospace; font-weight:700; font-size:14px;}
+  .kpi-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:16px;}
+  .kpi-card{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px;}
+  .kpi-label{font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--muted); display:flex; align-items:center; gap:6px; margin-bottom:4px;}
+  .kpi-value{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:20px; font-weight:600;}
+  .panel{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:16px;}
+  .panel-title{font-size:13px; font-weight:600; color:#D6DCE4; margin-bottom:10px; display:flex; align-items:center; gap:6px;}
+  .filter-toggle{background:none; border:none; color:#D6DCE4; font-size:12px; font-weight:600; display:flex; align-items:center; gap:6px; margin-bottom:8px; padding:0;}
+  .filter-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px;}
+  label{display:block; font-size:11px; color:var(--muted); margin-bottom:4px;}
+  input, select{
+    width:100%; background:var(--input-bg); border:1px solid var(--border); color:var(--text);
+    border-radius:6px; padding:7px 8px; font-size:13px; font-family:inherit;
+  }
+  input:focus, select:focus{outline:none; border-color:var(--gold);}
+  .charts-row{display:grid; grid-template-columns:1.3fr .7fr; gap:14px; margin-bottom:16px;}
+  @media(max-width:800px){.charts-row{grid-template-columns:1fr;}}
+  .chart-box{height:220px; position:relative;}
+  .legend-row{display:flex; justify-content:center; gap:16px; font-size:12px; margin-top:8px; color:var(--muted);}
+  .legend-dot{width:8px; height:8px; border-radius:2px; display:inline-block; margin-right:4px;}
+  table{width:100%; border-collapse:collapse; font-size:12px;}
+  thead tr{background:var(--bg);}
+  th{text-align:left; padding:9px 10px; color:var(--muted); font-weight:500; white-space:nowrap;}
+  td{padding:8px 10px; white-space:nowrap; border-top:1px solid var(--border);}
+  .table-wrap{overflow-x:auto; background:var(--card); border:1px solid var(--border); border-radius:12px;}
+  .mono{font-family:ui-monospace,Menlo,Consolas,monospace;}
+  .badge{padding:2px 7px; border-radius:5px; font-size:10px; font-weight:600;}
+  .badge-open{background:rgba(59,74,94,0.4); color:#9CA6B4;}
+  .badge-closed{background:rgba(200,180,80,0.15); color:var(--gold);}
+  .empty-row td{text-align:center; padding:30px; color:#5b6472;}
+  .form-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px;}
+  .form-note{grid-column:1/-1; border-top:1px solid var(--border); padding-top:10px; margin-top:2px; font-size:11px; color:var(--muted);}
+  .form-actions{display:flex; justify-content:flex-end; gap:8px; margin-top:14px;}
+  .form-error{color:var(--red); font-size:12px; margin-top:10px;}
+  .hidden{display:none !important;}
+  .footnote{font-size:10px; color:#5b6472; margin-top:10px;}
+  .panel-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
+  svg.icon{width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div>
+      <h1>Jurnal Trading Saham</h1>
+      <div class="sub" id="headerSub">Memuat data...</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-ghost" onclick="exportData()" title="Simpan salinan data (.json) sebagai backup">Export Data</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importData(event)">
+      <button class="btn-ghost" onclick="document.getElementById('importFile').click()" title="Muat data dari file backup (.json)">Import Data</button>
+      <button class="btn-primary" onclick="openAdd()">
+        <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Tambah Transaksi
+      </button>
+    </div>
+  </div>
+
+  <div class="refresh-status" id="refreshStatus">
+    <button class="btn-icon" id="refreshBtn" onclick="refreshPrices(true)" aria-label="Refresh harga" style="border:1px solid var(--border); border-radius:6px; padding:5px 9px; display:flex; align-items:center; gap:6px; color:var(--muted); font-size:11px;">
+      <svg class="icon" id="refreshIcon" viewBox="0 0 24 24" style="width:13px;height:13px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Refresh Harga
+    </button>
+    <span id="refreshStatusText">Memuat harga saat ini...</span>
+  </div>
+
+  <div class="spotlight" id="spotlightRow"></div>
+
+  <div class="kpi-grid" id="kpiRow"></div>
+
+  <div class="panel">
+    <button class="filter-toggle" onclick="toggleFilters()">
+      <svg class="icon" viewBox="0 0 24 24" style="width:13px;height:13px;"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      <span id="filterToggleLabel">Filter ▲</span>
+    </button>
+    <div class="filter-grid" id="filterPanel">
+      <div>
+        <label>Kode saham</label>
+        <input list="kodeList" id="fKode" placeholder="Semua saham" oninput="render()">
+        <datalist id="kodeList"></datalist>
+      </div>
+      <div>
+        <label>Status</label>
+        <select id="fStatus" onchange="render()">
+          <option value="all">Semua</option>
+          <option value="open">Open (belum dijual)</option>
+          <option value="closed">Closed (sudah dijual)</option>
+        </select>
+      </div>
+      <div>
+        <label>Tanggal beli dari</label>
+        <input type="date" id="fBeliFrom" onchange="render()">
+      </div>
+      <div>
+        <label>Tanggal beli sampai</label>
+        <input type="date" id="fBeliTo" onchange="render()">
+      </div>
+      <div>
+        <label>Tanggal jual dari</label>
+        <input type="date" id="fJualFrom" onchange="render()">
+      </div>
+      <div>
+        <label>Tanggal jual sampai</label>
+        <input type="date" id="fJualTo" onchange="render()">
+      </div>
+      <div style="display:flex; align-items:flex-end;">
+        <button class="btn-ghost" style="width:100%;" onclick="resetFilters()">Reset filter</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <div class="panel" style="margin-bottom:0;">
+      <div class="panel-title">Untung/Rugi per Saham</div>
+      <div class="chart-box"><canvas id="barChart" role="img" aria-label="Grafik batang untung rugi per saham">Grafik untung/rugi per saham</canvas></div>
+    </div>
+    <div class="panel" style="margin-bottom:0;">
+      <div class="panel-title">Status Posisi</div>
+      <div class="chart-box"><canvas id="pieChart" role="img" aria-label="Grafik status posisi open vs closed">Status posisi open vs closed</canvas></div>
+      <div class="legend-row" id="pieLegend"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="linePanel">
+    <div class="panel-title">Kumulatif Untung/Rugi Realized (kronologis)</div>
+    <div class="chart-box" style="height:200px;"><canvas id="lineChart" role="img" aria-label="Grafik kumulatif untung rugi realized">Grafik kumulatif untung rugi realized dari waktu ke waktu</canvas></div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Saham</th><th>Tgl Beli</th><th>Lot Beli</th><th>Harga Beli</th><th>Fee Beli %</th><th>Total Beli</th>
+          <th>Tgl Jual</th><th>Lot Jual</th><th>Harga Jual</th><th>Fee Jual %</th><th>Total Jual</th><th>Harga Saat Ini</th><th>Status</th>
+          <th>Untung/Rugi</th><th>Potensi U/R</th><th>Total U/R</th><th>Return</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="panel hidden" id="formPanel">
+    <div class="panel-head">
+      <div class="panel-title" id="formTitle" style="margin-bottom:0;">Tambah Transaksi</div>
+      <button class="btn-icon" onclick="closeForm()" aria-label="Tutup">
+        <svg class="icon" viewBox="0 0 24 24" style="color:var(--muted);"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="form-grid">
+      <div><label>Kode saham *</label><input id="fmKode" placeholder="BBCA"></div>
+      <div><label>Tanggal beli *</label><input type="date" id="fmTglBeli"></div>
+      <div><label>Lot beli *</label><input type="number" min="0" id="fmLotBeli" placeholder="10"></div>
+      <div><label>Harga beli (Rp/lembar) *</label><input type="number" min="0" id="fmHargaBeli" placeholder="9500"></div>
+      <div><label>Fee beli (%)</label><input type="number" min="0" step="0.01" id="fmFeeBeliPct" placeholder="0.15"></div>
+      <div class="form-note">Isi bagian di bawah HANYA jika saham sudah terjual. Kosongkan semua jika masih dipegang (Open) — harga saat ini akan terisi otomatis secara realtime, kolom ini hanya untuk override manual bila diperlukan.</div>
+      <div><label>Tanggal jual</label><input type="date" id="fmTglJual"></div>
+      <div><label>Lot jual</label><input type="number" min="0" id="fmLotJual" placeholder="10"></div>
+      <div><label>Harga jual (Rp/lembar)</label><input type="number" min="0" id="fmHargaJual" placeholder="10200"></div>
+      <div><label>Fee jual (%)</label><input type="number" min="0" step="0.01" id="fmFeeJualPct" placeholder="0.25"></div>
+      <div><label>Harga saat ini (override manual)</label><input type="number" min="0" id="fmHargaSekarang" placeholder="10450"></div>
+    </div>
+    <div class="form-error hidden" id="formError"></div>
+    <div class="form-actions">
+      <button class="btn-ghost" onclick="closeForm()">Batal</button>
+      <button class="btn-primary" id="formSubmitBtn" onclick="handleSubmit()">Tambah Transaksi</button>
+    </div>
+  </div>
+
+  <p class="footnote">1 lot = 100 lembar saham. Fee beli/jual dalam persen dari nilai transaksi (mis. fee jual sering ~0.25% karena sudah termasuk PPh final 0.1%). "Total Beli"/"Total Jual" sudah termasuk fee. "Harga Saat Ini" untuk posisi Open diambil otomatis tiap 60 detik dari Yahoo Finance (kode saham + .JK, BEI) — fitur ini butuh koneksi internet; jika gagal, isi manual lewat tombol Edit. Data transaksi tersimpan otomatis secara OFFLINE di browser perangkat ini (localStorage) — tetap tersimpan walau file dibuka tanpa internet. Gunakan tombol Export/Import Data untuk backup atau memindahkan data ke komputer/browser lain.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const STORAGE_KEY = "trades";
+const GREEN = "#2DD4BF", RED = "#F87171", GOLD = "#E8B44C", MUTED = "#7C8798", BORDER = "#233042", DIMGRAY = "#3B4A5E";
+
+const seedTrades = [
+  { id:"s1", kode:"BBCA", tglBeli:"2025-01-10", lotBeli:10, hargaBeli:9500, feeBeliPct:0.15, tglJual:"2025-03-14", lotJual:10, hargaJual:10200, feeJualPct:0.25, hargaSekarang:"" },
+  { id:"s2", kode:"BBRI", tglBeli:"2025-01-15", lotBeli:20, hargaBeli:4800, feeBeliPct:0.15, tglJual:"2025-02-20", lotJual:20, hargaJual:4550, feeJualPct:0.25, hargaSekarang:"" },
+  { id:"s3", kode:"TLKM", tglBeli:"2025-02-01", lotBeli:15, hargaBeli:3200, feeBeliPct:0.15, tglJual:"", lotJual:"", hargaJual:"", feeJualPct:"", hargaSekarang:3450 },
+  { id:"s4", kode:"ASII", tglBeli:"2025-02-10", lotBeli:8, hargaBeli:5100, feeBeliPct:0.15, tglJual:"2025-05-02", lotJual:8, hargaJual:5600, feeJualPct:0.25, hargaSekarang:"" },
+  { id:"s5", kode:"UNVR", tglBeli:"2025-02-18", lotBeli:25, hargaBeli:2300, feeBeliPct:0.15, tglJual:"2025-04-11", lotJual:25, hargaJual:2100, feeJualPct:0.25, hargaSekarang:"" },
+  { id:"s6", kode:"ANTM", tglBeli:"2025-03-05", lotBeli:30, hargaBeli:1450, feeBeliPct:0.15, tglJual:"", lotJual:"", hargaJual:"", feeJualPct:"", hargaSekarang:1980 },
+  { id:"s7", kode:"BMRI", tglBeli:"2025-03-20", lotBeli:12, hargaBeli:6200, feeBeliPct:0.15, tglJual:"2025-06-09", lotJual:12, hargaJual:6850, feeJualPct:0.25, hargaSekarang:"" },
+  { id:"s8", kode:"GOTO", tglBeli:"2025-04-02", lotBeli:100, hargaBeli:62, feeBeliPct:0.15, tglJual:"2025-05-15", lotJual:100, hargaJual:54, feeJualPct:0.25, hargaSekarang:"" },
+  { id:"s9", kode:"ADRO", tglBeli:"2025-04-18", lotBeli:40, hargaBeli:2650, feeBeliPct:0.15, tglJual:"", lotJual:"", hargaJual:"", feeJualPct:"", hargaSekarang:2500 },
+  { id:"s10", kode:"ICBP", tglBeli:"2025-05-06", lotBeli:10, hargaBeli:10800, feeBeliPct:0.15, tglJual:"2025-07-01", lotJual:10, hargaJual:11500, feeJualPct:0.25, hargaSekarang:"" },
+  { id:"s11", kode:"BBCA", tglBeli:"2025-06-01", lotBeli:15, hargaBeli:9800, feeBeliPct:0.15, tglJual:"", lotJual:"", hargaJual:"", feeJualPct:"", hargaSekarang:10450 },
+  { id:"s12", kode:"PGAS", tglBeli:"2025-07-20", lotBeli:18, hargaBeli:1600, feeBeliPct:0.15, tglJual:"2025-08-10", lotJual:18, hargaJual:1520, feeJualPct:0.25, hargaSekarang:"" }
+];
+
+let trades = [];
+let editId = null;
+let filtersOpen = true;
+let barChartInst = null, pieChartInst = null, lineChartInst = null;
+
+function rupiah(n){
+  const v = Math.round(Number(n) || 0);
+  const sign = v < 0 ? "-" : "";
+  return sign + "Rp" + Math.abs(v).toLocaleString("id-ID");
+}
+function pctFmt(n){
+  if (!isFinite(n)) return "0.0%";
+  return (n * 100).toFixed(1) + "%";
+}
+function fmtDate(d){
+  if (!d) return "-";
+  const dt = new Date(d + "T00:00:00");
+  if (isNaN(dt)) return "-";
+  return dt.toLocaleDateString("id-ID", { day:"2-digit", month:"short", year:"numeric" });
+}
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function computeRow(t){
+  const lotBeli = Number(t.lotBeli) || 0;
+  const hargaBeli = Number(t.hargaBeli) || 0;
+  const feeBeliPct = Number(t.feeBeliPct) || 0;
+  const lotJual = Number(t.lotJual) || 0;
+  const hargaJual = Number(t.hargaJual) || 0;
+  const feeJualPct = Number(t.feeJualPct) || 0;
+  const hargaSekarang = Number(t.hargaSekarang) || 0;
+  const isClosed = !!t.tglJual;
+
+  const nilaiBeli = lotBeli * 100 * hargaBeli;
+  const feeBeliRp = nilaiBeli * (feeBeliPct / 100);
+  const modal = nilaiBeli + feeBeliRp;
+
+  const nilaiJual = isClosed ? lotJual * 100 * hargaJual : 0;
+  const feeJualRp = isClosed ? nilaiJual * (feeJualPct / 100) : 0;
+  const hasilJual = isClosed ? nilaiJual - feeJualRp : null;
+
+  const realized = isClosed ? hasilJual - modal : 0;
+  const nilaiSekarang = !isClosed ? lotBeli * 100 * hargaSekarang : 0;
+  const potential = !isClosed ? nilaiSekarang - modal : 0;
+  const total = realized + potential;
+  const returnPct = modal !== 0 ? total / modal : 0;
+
+  return Object.assign({}, t, { isClosed, modal, hasilJual, realized, potential, total, returnPct });
+}
+
+// ---------- Penyimpanan lokal (offline) ----------
+// Pakai localStorage browser supaya data tetap tersimpan walau file ini
+// dibuka langsung dari komputer (tanpa perlu internet/server).
+function loadTrades(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw){
+      trades = JSON.parse(raw);
+    } else {
+      trades = seedTrades.slice();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
+    }
+  } catch(e){
+    trades = seedTrades.slice();
+  }
+  render();
+}
+
+function persist(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
+  } catch(e){
+    console.error("Gagal menyimpan data ke penyimpanan lokal:", e);
+  }
+}
+
+function exportData(){
+  const blob = new Blob([JSON.stringify(trades, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const stamp = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `jurnal-trading-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importData(evt){
+  const file = evt.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const data = JSON.parse(e.target.result);
+      if (!Array.isArray(data)) throw new Error("Format file tidak sesuai (harus berupa daftar transaksi).");
+      trades = data;
+      persist();
+      render();
+      alert("Data berhasil diimpor: " + data.length + " transaksi.");
+    } catch(err){
+      alert("Gagal mengimpor file: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+  evt.target.value = "";
+}
+
+// ---------- Harga saat ini (realtime) ----------
+// Mengambil harga terbaru dari Yahoo Finance (kode saham + suffix .JK untuk BEI)
+// lewat proxy publik supaya bisa dipanggil langsung dari browser (CORS).
+const PROXY = "https://api.allorigins.win/raw?url=";
+
+async function fetchLivePrices(kodeList){
+  if (kodeList.length === 0) return {};
+  const symbols = kodeList.map(k => k + ".JK").join(",");
+  const target = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols}`;
+  const res = await fetch(PROXY + encodeURIComponent(target));
+  if (!res.ok) throw new Error("Network error " + res.status);
+  const data = await res.json();
+  const list = (data.quoteResponse && data.quoteResponse.result) || [];
+  const map = {};
+  list.forEach(q => {
+    if (q.symbol && typeof q.regularMarketPrice === "number"){
+      map[q.symbol.replace(".JK","")] = q.regularMarketPrice;
+    }
+  });
+  return map;
+}
+
+let refreshInFlight = false;
+async function refreshPrices(isManual){
+  if (refreshInFlight) return;
+  const openKodes = Array.from(new Set(trades.filter(t => !t.tglJual).map(t => t.kode)));
+  if (openKodes.length === 0){
+    setRefreshStatus("Tidak ada posisi open yang perlu dipantau.", false);
+    return;
+  }
+  refreshInFlight = true;
+  setRefreshLoading(true);
+  try{
+    const priceMap = await fetchLivePrices(openKodes);
+    let hit = 0;
+    trades = trades.map(t => {
+      if (!t.tglJual && priceMap[t.kode] != null){
+        hit++;
+        return Object.assign({}, t, { hargaSekarang: priceMap[t.kode] });
+      }
+      return t;
+    });
+    await persist();
+    render();
+    const now = new Date().toLocaleTimeString("id-ID");
+    if (hit === 0){
+      setRefreshStatus("Tidak ada harga yang berhasil diambil (cek kode saham). Terakhir dicoba: " + now, true);
+    } else {
+      setRefreshStatus(`Terakhir update: ${now} · ${hit}/${openKodes.length} saham berhasil diambil (harga real-time/delay singkat, sumber: Yahoo Finance)`, false);
+    }
+  } catch(e){
+    setRefreshStatus("Gagal mengambil harga otomatis (koneksi/proxy bermasalah). Silakan coba lagi, atau isi manual lewat tombol Edit.", true);
+  } finally {
+    refreshInFlight = false;
+    setRefreshLoading(false);
+  }
+}
+
+function setRefreshLoading(loading){
+  const icon = document.getElementById("refreshIcon");
+  const btn = document.getElementById("refreshBtn");
+  icon.classList.toggle("spin", loading);
+  btn.style.opacity = loading ? "0.6" : "1";
+}
+
+function setRefreshStatus(text, isErr){
+  const el = document.getElementById("refreshStatusText");
+  const wrap = document.getElementById("refreshStatus");
+  el.textContent = text;
+  wrap.classList.toggle("err", !!isErr);
+}
+
+
+function getFilters(){
+  return {
+    kode: document.getElementById("fKode").value.trim().toLowerCase(),
+    status: document.getElementById("fStatus").value,
+    beliFrom: document.getElementById("fBeliFrom").value,
+    beliTo: document.getElementById("fBeliTo").value,
+    jualFrom: document.getElementById("fJualFrom").value,
+    jualTo: document.getElementById("fJualTo").value
+  };
+}
+
+function resetFilters(){
+  document.getElementById("fKode").value = "";
+  document.getElementById("fStatus").value = "all";
+  document.getElementById("fBeliFrom").value = "";
+  document.getElementById("fBeliTo").value = "";
+  document.getElementById("fJualFrom").value = "";
+  document.getElementById("fJualTo").value = "";
+  render();
+}
+
+function toggleFilters(){
+  filtersOpen = !filtersOpen;
+  document.getElementById("filterPanel").classList.toggle("hidden", !filtersOpen);
+  document.getElementById("filterToggleLabel").textContent = "Filter " + (filtersOpen ? "▲" : "▼");
+}
+
+function render(){
+  const computed = trades.map(computeRow);
+  const f = getFilters();
+
+  const filtered = computed.filter(t => {
+    if (f.kode && !t.kode.toLowerCase().includes(f.kode)) return false;
+    if (f.status === "open" && t.isClosed) return false;
+    if (f.status === "closed" && !t.isClosed) return false;
+    if (f.beliFrom && t.tglBeli < f.beliFrom) return false;
+    if (f.beliTo && t.tglBeli > f.beliTo) return false;
+    if (f.jualFrom && (!t.tglJual || t.tglJual < f.jualFrom)) return false;
+    if (f.jualTo && (!t.tglJual || t.tglJual > f.jualTo)) return false;
+    return true;
+  });
+
+  const totalRealized = filtered.reduce((a,t)=>a+t.realized,0);
+  const totalPotential = filtered.reduce((a,t)=>a+t.potential,0);
+  const totalOverall = totalRealized + totalPotential;
+  const totalHargaBeli = filtered.reduce((a,t)=>a+t.modal,0);
+  const totalHargaJual = filtered.reduce((a,t)=> t.isClosed ? a+t.hasilJual : a, 0);
+  const closedTrades = filtered.filter(t=>t.isClosed);
+  const wins = closedTrades.filter(t=>t.realized>0).length;
+  const winRate = closedTrades.length ? wins/closedTrades.length : 0;
+  const closedCount = closedTrades.length;
+  const openCount = filtered.length - closedCount;
+
+  const perSahamMap = {};
+  filtered.forEach(t=>{
+    if (!perSahamMap[t.kode]) perSahamMap[t.kode] = { kode:t.kode, total:0 };
+    perSahamMap[t.kode].total += t.total;
+  });
+  const perSaham = Object.values(perSahamMap).sort((a,b)=>b.total-a.total);
+  const topGainer = perSaham.length ? perSaham[0] : null;
+  const topLoser = perSaham.length ? perSaham[perSaham.length-1] : null;
+
+  document.getElementById("headerSub").textContent =
+    trades.length + " transaksi tercatat · " + openCount + " posisi terbuka";
+
+  renderSpotlight(topGainer, topLoser);
+  renderKpi(totalRealized, totalPotential, totalOverall, winRate, totalHargaBeli, totalHargaJual, closedTrades.length, wins);
+  renderCharts(perSaham, closedCount, openCount, filtered);
+  renderTable(filtered);
+  renderKodeList();
+}
+
+function renderSpotlight(topGainer, topLoser){
+  const el = document.getElementById("spotlightRow");
+  if (!topGainer && !topLoser){ el.innerHTML = ""; return; }
+  let html = "";
+  if (topGainer){
+    html += `<div class="spot-card spot-gain">
+      <svg class="icon" viewBox="0 0 24 24" style="color:${GREEN};width:20px;height:20px;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      <div><div class="spot-label">Saham paling untung</div>
+      <div class="spot-value" style="color:${GREEN}">${esc(topGainer.kode)} · ${rupiah(topGainer.total)}</div></div>
+    </div>`;
+  }
+  if (topLoser && topLoser !== topGainer){
+    html += `<div class="spot-card spot-loss">
+      <svg class="icon" viewBox="0 0 24 24" style="color:${RED};width:20px;height:20px;"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+      <div><div class="spot-label">Saham paling rugi</div>
+      <div class="spot-value" style="color:${RED}">${esc(topLoser.kode)} · ${rupiah(topLoser.total)}</div></div>
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+
+function renderKpi(totalRealized, totalPotential, totalOverall, winRate, totalHargaBeli, totalHargaJual, closedCount, wins){
+  const el = document.getElementById("kpiRow");
+  const cards = [
+    { label:"Untung/Rugi Realized", value:rupiah(totalRealized), color: totalRealized>=0?GREEN:RED },
+    { label:"Potensi Untung/Rugi", value:rupiah(totalPotential), color: totalPotential>=0?GREEN:RED },
+    { label:"Total Untung/Rugi", value:rupiah(totalOverall), color: totalOverall>=0?GREEN:RED },
+    { label:"Total Harga Beli", value:rupiah(totalHargaBeli), color: "#E8EDF2" },
+    { label:"Total Harga Jual", value:rupiah(totalHargaJual), color: "#E8EDF2" },
+    { label:"Win Rate (Closed)", value: closedCount ? pctFmt(winRate) + " · " + wins + "/" + closedCount : "-", color: GOLD }
+  ];
+  el.innerHTML = cards.map(c => `
+    <div class="kpi-card">
+      <div class="kpi-label">${esc(c.label)}</div>
+      <div class="kpi-value" style="color:${c.color}">${c.value}</div>
+    </div>`).join("");
+}
+
+function renderCharts(perSaham, closedCount, openCount, filtered){
+  const barCtx = document.getElementById("barChart");
+  if (barChartInst) barChartInst.destroy();
+  barChartInst = new Chart(barCtx, {
+    type:"bar",
+    data:{
+      labels: perSaham.map(s=>s.kode),
+      datasets:[{
+        data: perSaham.map(s=>Math.round(s.total)),
+        backgroundColor: perSaham.map(s=> s.total>=0 ? GREEN : RED),
+        borderRadius:4, maxBarThickness:36
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(ctx)=>rupiah(ctx.parsed.y) } } },
+      scales:{
+        x:{ grid:{display:false}, ticks:{ color:MUTED, font:{size:11} } },
+        y:{ grid:{color:"#1F2937"}, ticks:{ color:MUTED, font:{size:10}, callback:(v)=>(v/1000)+"k" } }
+      }
+    }
+  });
+
+  const pieCtx = document.getElementById("pieChart");
+  if (pieChartInst) pieChartInst.destroy();
+  pieChartInst = new Chart(pieCtx, {
+    type:"doughnut",
+    data:{
+      labels:["Closed","Open"],
+      datasets:[{ data:[closedCount, openCount], backgroundColor:[GOLD, DIMGRAY], borderColor:"#131B26", borderWidth:2 }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(ctx)=>ctx.label+": "+ctx.parsed } } }
+    }
+  });
+  document.getElementById("pieLegend").innerHTML =
+    `<span><span class="legend-dot" style="background:${GOLD}"></span>Closed (${closedCount})</span>
+     <span><span class="legend-dot" style="background:${DIMGRAY}"></span>Open (${openCount})</span>`;
+
+  const closed = filtered.filter(t=>t.isClosed && t.tglJual).sort((a,b)=>a.tglJual.localeCompare(b.tglJual));
+  let cum = 0;
+  const lineLabels = [], lineData = [];
+  closed.forEach(t=>{ cum += t.realized; lineLabels.push(fmtDate(t.tglJual)); lineData.push(Math.round(cum)); });
+
+  const linePanel = document.getElementById("linePanel");
+  if (lineLabels.length === 0){
+    linePanel.classList.add("hidden");
+  } else {
+    linePanel.classList.remove("hidden");
+    const lineCtx = document.getElementById("lineChart");
+    if (lineChartInst) lineChartInst.destroy();
+    lineChartInst = new Chart(lineCtx, {
+      type:"line",
+      data:{ labels:lineLabels, datasets:[{ data:lineData, borderColor:GOLD, backgroundColor:GOLD, pointRadius:3, borderWidth:2, tension:0.2 }] },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(ctx)=>rupiah(ctx.parsed.y) } } },
+        scales:{
+          x:{ grid:{display:false}, ticks:{ color:MUTED, font:{size:10} } },
+          y:{ grid:{color:"#1F2937"}, ticks:{ color:MUTED, font:{size:10}, callback:(v)=>(v/1000)+"k" } }
+        }
+      }
+    });
+  }
+}
+
+function renderTable(filtered){
+  const body = document.getElementById("tableBody");
+  if (filtered.length === 0){
+    body.innerHTML = `<tr class="empty-row"><td colspan="18">Tidak ada transaksi yang cocok dengan filter.</td></tr>`;
+    return;
+  }
+  body.innerHTML = filtered.map(t => `
+    <tr>
+      <td class="mono" style="font-weight:600;">${esc(t.kode)}</td>
+      <td style="color:#C9D1DB;">${fmtDate(t.tglBeli)}</td>
+      <td class="mono">${t.lotBeli}</td>
+      <td class="mono">${rupiah(t.hargaBeli)}</td>
+      <td class="mono" style="color:${MUTED};">${Number(t.feeBeliPct).toFixed(2)}%</td>
+      <td class="mono" style="font-weight:600;">${rupiah(t.modal)}</td>
+      <td style="color:#C9D1DB;">${fmtDate(t.tglJual)}</td>
+      <td class="mono">${t.lotJual || "-"}</td>
+      <td class="mono">${t.hargaJual ? rupiah(t.hargaJual) : "-"}</td>
+      <td class="mono" style="color:${MUTED};">${t.feeJualPct !== "" && t.feeJualPct != null ? Number(t.feeJualPct).toFixed(2)+"%" : "-"}</td>
+      <td class="mono" style="font-weight:600;">${t.isClosed ? rupiah(t.hasilJual) : "-"}</td>
+      <td class="mono">${!t.isClosed
+          ? (t.hargaSekarang ? `<span class="live-dot" style="margin-right:5px;"></span>${rupiah(t.hargaSekarang)}` : '<span style="color:'+MUTED+'">menunggu...</span>')
+          : `<span style="color:${MUTED}">-</span>`}</td>
+      <td><span class="badge ${t.isClosed ? "badge-closed":"badge-open"}">${t.isClosed?"Closed":"Open"}</span></td>
+      <td class="mono" style="font-weight:600; color:${t.isClosed ? (t.realized>=0?GREEN:RED) : MUTED};">${t.isClosed ? rupiah(t.realized) : "-"}</td>
+      <td class="mono" style="font-weight:600; color:${!t.isClosed ? (t.potential>=0?GREEN:RED) : MUTED};">${!t.isClosed ? rupiah(t.potential) : "-"}</td>
+      <td class="mono" style="font-weight:700; color:${t.total>=0?GREEN:RED};">${rupiah(t.total)}</td>
+      <td class="mono" style="color:${t.returnPct>=0?GREEN:RED};">${pctFmt(t.returnPct)}</td>
+      <td>
+        <div style="display:flex; gap:4px;">
+          <button class="btn-icon" onclick="openEdit('${t.id}')" aria-label="Edit">
+            <svg class="icon" viewBox="0 0 24 24" style="color:${MUTED};width:14px;height:14px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="btn-icon" onclick="handleDelete('${t.id}')" aria-label="Hapus">
+            <svg class="icon" viewBox="0 0 24 24" style="color:${RED};width:14px;height:14px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          </button>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function renderKodeList(){
+  const uniq = Array.from(new Set(trades.map(t=>t.kode))).sort();
+  document.getElementById("kodeList").innerHTML = uniq.map(k=>`<option value="${esc(k)}">`).join("");
+}
+
+function openAdd(){
+  editId = null;
+  document.getElementById("formTitle").textContent = "Tambah Transaksi";
+  document.getElementById("formSubmitBtn").textContent = "Tambah Transaksi";
+  ["fmKode","fmTglBeli","fmLotBeli","fmHargaBeli","fmTglJual","fmLotJual","fmHargaJual","fmHargaSekarang"]
+    .forEach(id=>document.getElementById(id).value="");
+  document.getElementById("fmFeeBeliPct").value = "0.15";
+  document.getElementById("fmFeeJualPct").value = "0.25";
+  hideFormError();
+  document.getElementById("formPanel").classList.remove("hidden");
+  document.getElementById("formPanel").scrollIntoView({behavior:"smooth", block:"center"});
+}
+
+function openEdit(id){
+  const t = trades.find(x=>x.id===id);
+  if (!t) return;
+  editId = id;
+  document.getElementById("formTitle").textContent = "Edit Transaksi";
+  document.getElementById("formSubmitBtn").textContent = "Simpan Perubahan";
+  document.getElementById("fmKode").value = t.kode;
+  document.getElementById("fmTglBeli").value = t.tglBeli;
+  document.getElementById("fmLotBeli").value = t.lotBeli;
+  document.getElementById("fmHargaBeli").value = t.hargaBeli;
+  document.getElementById("fmFeeBeliPct").value = t.feeBeliPct;
+  document.getElementById("fmTglJual").value = t.tglJual || "";
+  document.getElementById("fmLotJual").value = t.lotJual || "";
+  document.getElementById("fmHargaJual").value = t.hargaJual || "";
+  document.getElementById("fmFeeJualPct").value = t.feeJualPct || "0.25";
+  document.getElementById("fmHargaSekarang").value = t.hargaSekarang || "";
+  hideFormError();
+  document.getElementById("formPanel").classList.remove("hidden");
+  document.getElementById("formPanel").scrollIntoView({behavior:"smooth", block:"center"});
+}
+
+function closeForm(){
+  editId = null;
+  document.getElementById("formPanel").classList.add("hidden");
+  hideFormError();
+}
+
+function showFormError(msg){
+  const el = document.getElementById("formError");
+  el.textContent = msg;
+  el.classList.remove("hidden");
+}
+function hideFormError(){
+  document.getElementById("formError").classList.add("hidden");
+}
+
+function handleDelete(id){
+  trades = trades.filter(t=>t.id!==id);
+  persist();
+  render();
+}
+
+function handleSubmit(){
+  const kode = document.getElementById("fmKode").value.trim();
+  const tglBeli = document.getElementById("fmTglBeli").value;
+  const lotBeli = document.getElementById("fmLotBeli").value;
+  const hargaBeli = document.getElementById("fmHargaBeli").value;
+  const feeBeliPct = document.getElementById("fmFeeBeliPct").value;
+  const tglJual = document.getElementById("fmTglJual").value;
+  const lotJual = document.getElementById("fmLotJual").value;
+  const hargaJual = document.getElementById("fmHargaJual").value;
+  const feeJualPct = document.getElementById("fmFeeJualPct").value;
+  const hargaSekarang = document.getElementById("fmHargaSekarang").value;
+
+  if (!kode){ showFormError("Kode saham wajib diisi."); return; }
+  if (!tglBeli){ showFormError("Tanggal beli wajib diisi."); return; }
+  if (!lotBeli || Number(lotBeli) <= 0){ showFormError("Lot beli wajib diisi dan lebih dari 0."); return; }
+  if (!hargaBeli || Number(hargaBeli) <= 0){ showFormError("Harga beli wajib diisi dan lebih dari 0."); return; }
+  const hasSellData = tglJual || lotJual || hargaJual;
+  if (hasSellData && (!tglJual || !lotJual || !hargaJual)){
+    showFormError("Untuk transaksi yang sudah dijual, lengkapi tanggal jual, lot jual, dan harga jual.");
+    return;
+  }
+
+  const clean = {
+    kode: kode.toUpperCase(),
+    tglBeli,
+    lotBeli: Number(lotBeli),
+    hargaBeli: Number(hargaBeli),
+    feeBeliPct: Number(feeBeliPct) || 0,
+    tglJual: tglJual || "",
+    lotJual: tglJual ? Number(lotJual) : "",
+    hargaJual: tglJual ? Number(hargaJual) : "",
+    feeJualPct: tglJual ? (Number(feeJualPct) || 0) : "",
+    hargaSekarang: !tglJual ? (Number(hargaSekarang) || 0) : ""
+  };
+
+  if (editId){
+    trades = trades.map(t => t.id === editId ? Object.assign({}, clean, {id: editId}) : t);
+  } else {
+    trades = trades.concat([Object.assign({}, clean, {id: "t" + Date.now()})]);
+  }
+  persist();
+  closeForm();
+  render();
+}
+
+document.getElementById("filterPanel").classList.remove("hidden");
+loadTrades();
+refreshPrices(false);
+setInterval(() => refreshPrices(false), 60000); // auto-refresh tiap 60 detik
+
+
+</script>
+</body>
+</html>
